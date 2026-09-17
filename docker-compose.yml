@@ -1,0 +1,68 @@
+# ===========================================================================
+# AI Customer Service Platform — single-command deployment
+#
+#   docker compose up -d --build          # app only, SQLite (default)
+#   docker compose --profile postgres up -d --build   # app + PostgreSQL
+#
+# Configuration is read from a local .env file (copy .env.example first).
+# ===========================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cs-agent-platform:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_PORT: "8000"
+      # When the postgres profile is active, point the app at PostgreSQL.
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/app.db}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      ENGINE_MODE: ${ENGINE_MODE:-builtin}
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      DIFY_BASE_URL: ${DIFY_BASE_URL:-}
+      DIFY_API_KEY: ${DIFY_API_KEY:-}
+      AUTH_MODE: ${AUTH_MODE:-dev}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cs_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-cs_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cs_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cs_user} -d ${POSTGRES_DB:-cs_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app_data:
+  postgres_data:

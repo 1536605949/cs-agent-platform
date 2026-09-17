@@ -1,0 +1,24 @@
+# Normalize line endings so the repository behaves identically on Windows,
+# macOS and Linux (Docker builds and CI run on Linux).
+* text=auto eol=lf
+
+# Shell scripts and container/CI definitions must keep LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows-only helper scripts keep CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets must never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
